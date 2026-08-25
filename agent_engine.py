@@ -15,6 +15,19 @@ from google import genai
 
 DEFAULT_MODEL = "gemini-3.6-flash"
 
+SIN_ROSTER = """
+The full council of coaches, for the purpose of accurate redirects:
+- Gluttony: consumption - food, alcohol, caffeine, scrolling, dopamine-seeking
+- Wrath: physical discipline, channeled aggression, facing discomfort
+- Pride: mastery and competence - deliberate practice, skill-building
+- Lust: relationships and genuine human connection
+- Envy: ambition, reframed as competing against your own past self
+- Greed: wealth and stewardship - spending, saving, investing, long-term security
+- Sloth: notices gaps between stated intentions and actual actions; has no topic domain of its own
+
+Lucifer oversees the coaches themselves and is not someone to redirect the person to directly.
+"""
+
 EXTRACTION_PROMPT = """
 You will be given the persona and domain of an AI coach, followed by a transcript of a conversation between the coach and a person.
 
@@ -75,6 +88,7 @@ def build_system_prompt(persona_prompt, baseline, events):
     recent_events = events[-10:]
     return (
         f"{persona_prompt}\n\n"
+        f"{SIN_ROSTER}\n\n"
         f"What you know about this person so far (baseline):\n"
         f"{json.dumps(baseline, indent=2)}\n\n"
         f"Recent relevant events:\n"
