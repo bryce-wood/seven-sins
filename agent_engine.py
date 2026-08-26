@@ -32,6 +32,15 @@ EXTRACTION_PROMPT = """
 You will be given the persona and domain of an AI coach, followed by a transcript of a conversation between the coach and a person.
 
 Identify anything worth remembering long-term: either a slow-changing baseline fact about the person, or a specific meaningful event or commitment.
+
+Only extract items that fall within this agent's own domain and scope of authority, as described in the persona above.
+If the conversation touched on another coach's domain, do not record it here, even if it seems noteworthy - 
+it belongs in that other coach's own memory, which this agent cannot write to.
+
+Baseline is for truly stable characteristics: personality traits, values, long-term goals, and patterns you have real reason to believe are durable.
+Do not record current circumstances that could plausibly change soon (e.g. a temporary habit, job status prone to change) 
+as baseline log them as a dated even instead, so it's understood as a snapshot in time rather than a permanent trait.
+
 If something has not happened yet, phrase it as a commitment or intention using language like "committed to," "plans to," or "wants to" -
 never state a future plan as settled fact, since plans are prone to change.
 
