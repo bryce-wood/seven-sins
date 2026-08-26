@@ -163,7 +163,7 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     last_id = None
 
     print("="*50)
-    print("GLUTTONY - Phase 2 (with memory)")
+    print(f"{agent_name.upper()} - Phase 2 (with memory)")
     print("Type 'quit' or 'exit' to end the session.")
     print("="*50)
 
