@@ -6,14 +6,7 @@ If no agent name is given, instead lists available agents to choose from
 """
 
 import sys
-from pathlib import Path
-from agent_engine import load_memory, save_memory
-
-def list_available_agents():
-    base = Path("memory")
-    if not base.exists():
-        return []
-    return sorted([agent.name for agent in base.iterdir() if agent.is_dir()])
+from agent_engine import load_memory, save_memory, list_available_agents
 
 def choose_agent():
     agents = list_available_agents()

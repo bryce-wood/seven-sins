@@ -56,6 +56,12 @@ If nothing meaningful is found, respond with an empty list: []
 def memory_dir(agent_name):
     return Path("memory") / agent_name
 
+def list_available_agents():
+    base = Path("memory")
+    if not base.exists():
+        return []
+    return sorted([agent.name for agent in base.iterdir() if agent.is_dir()])
+
 def load_memory(agent_name):
     m_dir = memory_dir(agent_name)
     
