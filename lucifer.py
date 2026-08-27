@@ -130,7 +130,7 @@ def save_report(report_text):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     path = REPORTS_DIR / f"lucifer_{timestamp}.md"
-    with open(path, "w", encoding="cp1252") as f:
+    with open(path, "w", encoding="UTF-8") as f:
         f.write(report_text)
     return path
 

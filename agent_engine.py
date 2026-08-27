@@ -66,13 +66,13 @@ def load_memory(agent_name):
     m_dir = memory_dir(agent_name)
     
     try:
-        with open(m_dir / "baseline.json", "r") as f:
+        with open(m_dir / "baseline.json", "r", encoding="UTF-8") as f:
                 baseline = json.load(f)
     except FileNotFoundError:
         baseline = {}
 
     try:
-        with open(m_dir / "events.json", "r") as f:
+        with open(m_dir / "events.json", "r", encoding="UTF-8") as f:
                 events = json.load(f)
     except FileNotFoundError:
         events = []
@@ -83,10 +83,10 @@ def save_memory(agent_name, baseline, events):
     m_dir = memory_dir(agent_name)
     m_dir.mkdir(parents=True, exist_ok=True)
 
-    with open(m_dir / "baseline.json", "w") as f:
+    with open(m_dir / "baseline.json", "w", encoding="UTF-8") as f:
         json.dump(baseline, f, indent=2)
 
-    with open(m_dir / "events.json", "w") as f:
+    with open(m_dir / "events.json", "w", encoding="UTF-8") as f:
         json.dump(events, f, indent=2)
 
 def setup_client():
