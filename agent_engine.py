@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from google import genai
 
 DEFAULT_MODEL = "gemini-3.6-flash"
+EXTRACTION_MODEL = "gemini-3.6-flash" # meant to be the strongest (or stronger) model, ran once per session
 
 SIN_ROSTER = """
 The full council of coaches, for the purpose of accurate redirects:
@@ -40,6 +41,12 @@ it belongs in that other coach's own memory, which this agent cannot write to.
 Baseline is for truly stable characteristics: personality traits, values, long-term goals, and patterns you have real reason to believe are durable.
 Do not record current circumstances that could plausibly change soon (e.g. a temporary habit, job status prone to change) 
 as baseline log them as a dated even instead, so it's understood as a snapshot in time rather than a permanent trait.
+
+If the conversation includes multiple distinct facts or figures (e.g. separate numbers for different budget categories), 
+extract each as its own separate baseline entry rather than summarizing them into one.
+
+A meaningful event doesn't require an action to have been completed - 
+deciding to hold off on something after real consideration is just as memorable as following through on it.
 
 If something has not happened yet, phrase it as a commitment or intention using language like "committed to," "plans to," or "wants to" -
 never state a future plan as settled fact, since plans are prone to change.
@@ -210,7 +217,7 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     if transcript:
         print("\nReviewing session for memory extraction...")
         extraction_prompt = build_extraction_prompt(persona_prompt)
-        raw = extract_memory(client, model, extraction_prompt, "\n".join(transcript))
+        raw = extract_memory(client, EXTRACTION_MODEL, extraction_prompt, "\n".join(transcript))
         proposals = parse_proposals(raw)
         review_and_save_memory(agent_name, proposals, baseline, events)
     
