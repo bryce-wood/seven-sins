@@ -126,7 +126,7 @@ def build_extraction_prompt(persona_prompt):
     return f"{EXTRACTION_PROMPT}\n\nAgent persona and domain:\n{persona_prompt}"
 
 def extract_memory(client, model, extraction_prompt, transcript_text):
-    return call_model(client, model, extraction_prompt, transcript_text)
+    return call_model_text(client, model, extraction_prompt, transcript_text)
 
 def parse_proposals(raw_response):
     sanitized = raw_response.strip()
@@ -191,16 +191,16 @@ def import_agent_module(agent_name):
     except ImportError:
         return None
 
-def call_model(client, model, system_instruction, input_text, max_retries=2):
-    attempt = 2
+def call_model(client, model, system_instruction, input_text, previous_interaction_id=None, max_retries=2):
+    attempt = 0
     while True:
         try:
-            interaction = client.interactions.create(
+            return client.interactions.create(
                 model=model,
                 input=input_text,
                 system_instruction=system_instruction,
+                previous_interaction_id=previous_interaction_id,
             )
-            return interaction.output_text
         except errors.ClientError:
             raise
         except Exception:
@@ -209,6 +209,10 @@ def call_model(client, model, system_instruction, input_text, max_retries=2):
                 raise
             print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
             time.sleep(5)
+
+# thin wrapper to avoid boilerplate in the 99% of cases where only the output_text is needed
+def call_model_text(client, model, system_instruction, input_text, max_retries=2):
+    return call_model(client, model, system_instruction, input_text, max_retries=max_retries).output_text
 
 def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     baseline, events = load_memory(agent_name)
@@ -233,12 +237,7 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
 
 
         try:
-            interaction = client.interactions.create(
-                model=model,
-                input=user_input,
-                system_instruction=system_prompt,
-                previous_interaction_id=last_id,
-            )
+            interaction = call_model(client, model, system_prompt, user_input, previous_interaction_id=last_id)
             last_id = interaction.id
             reply = interaction.output_text
             print(f"\n{display_name}: {reply}")

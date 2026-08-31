@@ -10,7 +10,7 @@ import json
 import importlib
 from pathlib import Path
 from datetime import datetime
-from agent_engine import setup_client, load_memory, list_available_agents, import_agent_module, call_model, SIN_ROSTER, DEFAULT_MODEL
+from agent_engine import setup_client, load_memory, list_available_agents, import_agent_module, call_model_text, SIN_ROSTER, DEFAULT_MODEL
 
 REPORTS_DIR = Path("reports")
 
@@ -97,7 +97,7 @@ def build_report_input(memories):
 
 def generate_report(client, memories, model=DEFAULT_MODEL):
     report_input = build_report_input(memories)
-    return call_lucifer(client, LUCIFER_PROMPT, report_input, model)
+    return call_model_text(client, LUCIFER_PROMPT, report_input, model)
 
 def save_report(report_text):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,9 +106,6 @@ def save_report(report_text):
     with open(path, "w", encoding="UTF-8") as f:
         f.write(report_text)
     return path
-
-def call_lucifer(client, system_instruction, input_text, model=DEFAULT_MODEL):
-    return call_model(client, model, system_instruction, input_text)
 
 # for Lucifer's role in the council
 # given Lucifer's response of relevant agents, parses the message to determine the agents
@@ -142,14 +139,14 @@ def route_council(client, question, agent_names, model=DEFAULT_MODEL):
             contexts.append(f"--- {name} ---\n{context}")
 
     router_input = f"{SIN_ROSTER}\n\n" + "\n\n".join(contexts) + f"\n\nQuestion: {question}"
-    raw = call_lucifer(client, ROUTER_PROMPT, router_input, model)
+    raw = call_model_text(client, ROUTER_PROMPT, router_input, model)
     return parse_agent_list(raw, agent_names)
 
 # for Lucifer's role in the council
 # final call to Lucifer to determine the conclusion of the Council (or where they got stuck)
 def generate_verdict(client, question, transcript_text, model=DEFAULT_MODEL):
     verdict_input = f"Question: {question}\n\nCouncil transcript:\n{transcript_text}"
-    return call_lucifer(client, COUNCIL_VERDICT_PROMPT, verdict_input, model)
+    return call_model_text(client, COUNCIL_VERDICT_PROMPT, verdict_input, model)
 
 def main():
     client = setup_client()

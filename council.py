@@ -7,7 +7,7 @@ then Lucifer closes summarizing the verdict.
 
 from agent_engine import (
     setup_client, load_memory, build_system_prompt, build_extraction_prompt, extract_memory,
-    parse_proposals, review_and_save_memory, import_agent_module, call_model,
+    parse_proposals, review_and_save_memory, import_agent_module, call_model_text,
     BUILT_AGENTS, EXTRACTION_MODEL, DEFAULT_MODEL,
 )
 from lucifer import route_council, generate_verdict
@@ -34,7 +34,7 @@ def run_council_turn(client, agent_name, question, transcript):
     transcript_text = "\n".join(transcript) if transcript else "(no one has spoken yet)"
     turn_input = f"Question brought to the council: {question}\n\nTranscript so far:\n{transcript_text}"
 
-    return call_model(client, system_prompt, turn_input, model=DEFAULT_MODEL)
+    return call_model_text(client, DEFAULT_MODEL, system_prompt, turn_input)
 
 def run_council(client, question, participants):
     transcript = []
