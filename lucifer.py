@@ -7,7 +7,6 @@ Lucifer's role isn't to coach the person, but to give reports on the interworkin
 
 import sys
 import json
-import importlib
 from pathlib import Path
 from datetime import datetime
 from agent_engine import setup_client, load_memory, list_available_agents, import_agent_module, call_model_text, SIN_ROSTER, DEFAULT_MODEL
@@ -66,7 +65,7 @@ Keep it short - a few sentences, not a report.
 
 
 def get_agent_context(agent_name):
-    module = import_agent_module()
+    module = import_agent_module(agent_name)
     if module is None:
         return None
     domain = getattr(module, "DOMAIN", None)
@@ -97,7 +96,7 @@ def build_report_input(memories):
 
 def generate_report(client, memories, model=DEFAULT_MODEL):
     report_input = build_report_input(memories)
-    return call_model_text(client, LUCIFER_PROMPT, report_input, model)
+    return call_model_text(client=client, model=model, system_instruction=LUCIFER_PROMPT, input_text=report_input)
 
 def save_report(report_text):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -139,14 +138,14 @@ def route_council(client, question, agent_names, model=DEFAULT_MODEL):
             contexts.append(f"--- {name} ---\n{context}")
 
     router_input = f"{SIN_ROSTER}\n\n" + "\n\n".join(contexts) + f"\n\nQuestion: {question}"
-    raw = call_model_text(client, ROUTER_PROMPT, router_input, model)
+    raw = call_model_text(client=client, model=model, system_instruction=ROUTER_PROMPT, input_text=router_input)
     return parse_agent_list(raw, agent_names)
 
 # for Lucifer's role in the council
 # final call to Lucifer to determine the conclusion of the Council (or where they got stuck)
 def generate_verdict(client, question, transcript_text, model=DEFAULT_MODEL):
     verdict_input = f"Question: {question}\n\nCouncil transcript:\n{transcript_text}"
-    return call_model_text(client, COUNCIL_VERDICT_PROMPT, verdict_input, model)
+    return call_model_text(client=client, model=model, system_instruction=COUNCIL_VERDICT_PROMPT, input_text=verdict_input)
 
 def main():
     client = setup_client()

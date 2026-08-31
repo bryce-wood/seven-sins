@@ -13,7 +13,7 @@ from agent_engine import (
 from lucifer import route_council, generate_verdict
 
 MAX_TURNS = 4
-RUN_EXTRACTION_AFTER_COUNCIL = False # if True, every agent involved will try to extract memories (expensive: every agent makes its own call)
+RUN_EXTRACTION_AFTER_COUNCIL = True # if True, every agent involved will try to extract memories (expensive: every agent makes its own call)
 
 COUNCIL_MEMO = """
 You are currently in a Council session with other coaches, responding to a question the person explicitly brought to the whole council.
@@ -34,7 +34,7 @@ def run_council_turn(client, agent_name, question, transcript):
     transcript_text = "\n".join(transcript) if transcript else "(no one has spoken yet)"
     turn_input = f"Question brought to the council: {question}\n\nTranscript so far:\n{transcript_text}"
 
-    return call_model_text(client, DEFAULT_MODEL, system_prompt, turn_input)
+    return call_model_text(client=client, model=DEFAULT_MODEL, system_instruction=system_prompt, input_text=turn_input)
 
 def run_council(client, question, participants):
     transcript = []

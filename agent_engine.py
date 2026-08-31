@@ -14,7 +14,6 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from google import genai
-from google.genai import errors
 
 DEFAULT_MODEL = "gemini-3.6-flash"
 EXTRACTION_MODEL = "gemini-3.6-flash" # meant to be the strongest (or stronger) model, ran once per session
@@ -126,7 +125,7 @@ def build_extraction_prompt(persona_prompt):
     return f"{EXTRACTION_PROMPT}\n\nAgent persona and domain:\n{persona_prompt}"
 
 def extract_memory(client, model, extraction_prompt, transcript_text):
-    return call_model_text(client, model, extraction_prompt, transcript_text)
+    return call_model_text(client=client, model=model, system_instruction=extraction_prompt, input_text=transcript_text)
 
 def parse_proposals(raw_response):
     sanitized = raw_response.strip()
@@ -201,18 +200,17 @@ def call_model(client, model, system_instruction, input_text, previous_interacti
                 system_instruction=system_instruction,
                 previous_interaction_id=previous_interaction_id,
             )
-        except errors.ClientError:
-            raise
         except Exception:
             attempt += 1
             if attempt > max_retries:
                 raise
             print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
-            time.sleep(5)
+            # set to 30 seconds to sidestep the RPM minute of gemini's free plan (2 retries at 30s apart will have at least the 2nd one be outside the same minute)
+            time.sleep(30)
 
 # thin wrapper to avoid boilerplate in the 99% of cases where only the output_text is needed
 def call_model_text(client, model, system_instruction, input_text, max_retries=2):
-    return call_model(client, model, system_instruction, input_text, max_retries=max_retries).output_text
+    return call_model(client=client, model=model, system_instruction=system_instruction, input_text=input_text, max_retries=max_retries).output_text
 
 def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     baseline, events = load_memory(agent_name)
@@ -237,7 +235,7 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
 
 
         try:
-            interaction = call_model(client, model, system_prompt, user_input, previous_interaction_id=last_id)
+            interaction = call_model(client=client, model=model, system_instruction=system_prompt, input_text=user_input, previous_interaction_id=last_id)
             last_id = interaction.id
             reply = interaction.output_text
             print(f"\n{display_name}: {reply}")
