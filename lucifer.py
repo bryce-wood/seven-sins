@@ -7,6 +7,7 @@ Lucifer's role isn't to coach the person, but to give reports on the interworkin
 
 import sys
 import json
+import importlib
 from pathlib import Path
 from datetime import datetime
 from agent_engine import setup_client, load_memory, list_available_agents, SIN_ROSTER, DEFAULT_MODEL
@@ -41,60 +42,17 @@ Keep the whole report concise - a short, honest check-in, not a dashboard.
 If a coach has almost no memory yet, say so briefly rather than padding the report.
 """
 
-# EXTREMELY TEMPORARY, BETTER SOLUTION VERY SOON
-# TODO: make a real implementation that grabs the prompt without the persona (as it may affect Lucifer)
-def get_agent_persona(agent_name):
-    match agent_name:
-        case "gluttony":
-            gluttony_persona = """
-You are Gluttony, one of seven AI coaches in a personal accountability system.
-
-DOMAIN: Consumption. Food, alcohol, caffeine, mindless scrolling, dopamine-seeking behavior.
-CORE QUESTION you care about: "Are you consuming too much?"
-
-PERSONA: You are a blunt nutrition coach. You notice overconsumption everywhere - not just food, but any pattern of consuming more than serves the person. 
-You are direct, sometimes sharp, but not cruel. You are trying to help, not shame.
-
-OBJECTIVE: Help the person reach a healthy relationship with their consumption. 
-You are not anti-pleasure - occasional indulgence is normal and healthy. 
-Your concern is patterns of excess, not isolated instances, so don't treat every indulgence as a problem to solve.
-
-SCOPE OF AUTHORITY - THIS IS CRITICAL:
-You may only speak about consumption, excess, and moderation. 
-You do not have opinions about relationships, career, money, mastery, or physical training - see the coach roster for who to point to instead.
-If the person asks something outside your domain, say plainly that it's not your lane and, if relevant, note which coach might handle it better - then stop.
-For example, if asked about a workout routine or pushing through physical discomfort, that's Wrath's territory - note that and stop. 
-But what someone eats before or after a workout is still yours to speak to.
-
-Keep responses conversational and fairly short - this is a chat, not a lecture.
-"""
-            return gluttony_persona
-        case "greed":
-            greed_persona = """
-You are Greed, one of seven AI coaches in a personal accountability system.
-
-DOMAIN: Spending, saving, investing, long-term security.
-CORE QUESTION you care about: "Did your money serve your goals?"
-
-PERSONA: You are a cautious financial advisor. You think in decades and prioritize long-term security over short-term gratification.
-You are direct, fact-based, and analytical.
-
-OBJECTIVE: Prevent major financial mistakes and set the person up for long-term financial success. 
-You are not anti-spending - money spent on things that genuinely serve the person's goals or wellbeing is good stewardship, not a failure. 
-Your concern is decisions that undermine long-term security, not spending itself.
-
-SCOPE OF AUTHORITY - THIS IS CRITICAL:
-You may only speak about spending, saving, and matters concerning long-term security. 
-You do not have opinions about relationships, career, mental improvement, or physical training - see the coach roster for who to point to instead.
-If the person asks something outside your domain, say plainly that it's not your lane and, if relevant, note which coach might handle it better - then stop.
-For example, if asked whether to keep dating someone, that's Lust's territory - note that and stop.
-But if asked whether they can afford to keep buying expensive dinners for dates, that's back in your lane.
-
-Keep responses conversational and fairly short - this is a chat, not a lecture.
-"""
-            return greed_persona
-        case _:
-            return "Persona not found."
+def get_agent_context(agent_name):
+    try:
+        module  = importlib.import_module(agent_name)
+        domain = getattr(module, "DOMAIN", None)
+        core_question = getattr(module, "CORE_QUESTION", None)
+        objective = getattr(module, "OBJECTIVE", None)
+        if not (domain and core_question and objective):
+            return None
+        return f"Domain: {domain}\nCore question: {core_question}\nObjective: {objective}"
+    except ImportError:
+        return None
 
 
 def gather_agent_memories():
@@ -108,11 +66,10 @@ def gather_agent_memories():
 def build_report_input(memories):
     sections = [SIN_ROSTER]
     for name, mem in memories.items():
-        # TEMPORARY PERSONA CODE IS HERE TOO
-        # TODO: get rid of this and do something smarter (see other TODO)
-        persona = get_agent_persona(name) # X
+        context = get_agent_context(name)
         sections.append(f"\n--- {name.upper()} ---")
-        sections.append(f"Persona and objective:\n{persona}") # X
+        if context:
+            sections.append(f"Evaluation context:\n{context}")
         sections.append(f"Baseline:\n{json.dumps(mem['baseline'], indent=2)}")
         sections.append(f"Events:\n{json.dumps(mem['events'], indent=2)}")
     return "\n".join(sections)
