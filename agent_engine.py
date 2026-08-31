@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import time
+import importlib
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -17,6 +18,8 @@ from google.genai import errors
 
 DEFAULT_MODEL = "gemini-3.6-flash"
 EXTRACTION_MODEL = "gemini-3.6-flash" # meant to be the strongest (or stronger) model, ran once per session
+
+BUILT_AGENTS = ["gluttony", "greed"]
 
 SIN_ROSTER = """
 The full council of coaches, for the purpose of accurate redirects:
@@ -122,24 +125,8 @@ def build_system_prompt(persona_prompt, baseline, events):
 def build_extraction_prompt(persona_prompt):
     return f"{EXTRACTION_PROMPT}\n\nAgent persona and domain:\n{persona_prompt}"
 
-def extract_memory(client, model, extraction_prompt, transcript_text, max_retries=2):
-    attempt = 0
-    while True:
-        try:
-            interaction = client.interactions.create(
-                model=model,
-                input=transcript_text,
-                system_instruction=extraction_prompt,
-            )
-            return interaction.output_text
-        except errors.ClientError:
-            raise # if its our fault, stop
-        except Exception as e:
-            attempt += 1
-            if attempt > max_retries:
-                raise
-            print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
-            time.sleep(5)
+def extract_memory(client, model, extraction_prompt, transcript_text):
+    return call_model(client, model, extraction_prompt, transcript_text)
 
 def parse_proposals(raw_response):
     sanitized = raw_response.strip()
@@ -197,6 +184,31 @@ def save_failed_transcript(agent_name, transcript):
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(transcript))
     return path
+
+def import_agent_module(agent_name):
+    try:
+        return importlib.import_module(agent_name)
+    except ImportError:
+        return None
+
+def call_model(client, model, system_instruction, input_text, max_retries=2):
+    attempt = 2
+    while True:
+        try:
+            interaction = client.interactions.create(
+                model=model,
+                input=input_text,
+                system_instruction=system_instruction,
+            )
+            return interaction.output_text
+        except errors.ClientError:
+            raise
+        except Exception:
+            attempt += 1
+            if attempt > max_retries:
+                raise
+            print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
+            time.sleep(5)
 
 def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     baseline, events = load_memory(agent_name)
