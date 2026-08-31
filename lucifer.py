@@ -10,7 +10,7 @@ import json
 import importlib
 from pathlib import Path
 from datetime import datetime
-from agent_engine import setup_client, load_memory, list_available_agents, SIN_ROSTER, DEFAULT_MODEL
+from agent_engine import setup_client, load_memory, list_available_agents, import_agent_module, call_model, SIN_ROSTER, DEFAULT_MODEL
 
 REPORTS_DIR = Path("reports")
 
@@ -42,18 +42,39 @@ Keep the whole report concise - a short, honest check-in, not a dashboard.
 If a coach has almost no memory yet, say so briefly rather than padding the report.
 """
 
-def get_agent_context(agent_name):
-    try:
-        module  = importlib.import_module(agent_name)
-        domain = getattr(module, "DOMAIN", None)
-        core_question = getattr(module, "CORE_QUESTION", None)
-        objective = getattr(module, "OBJECTIVE", None)
-        if not (domain and core_question and objective):
-            return None
-        return f"Domain: {domain}\nCore question: {core_question}\nObjective: {objective}"
-    except ImportError:
-        return None
+ROUTER_PROMPT = """
+You are Lucifer, "The Architect," acting as router for a council session. 
+You will be given the roster of coaches with their domain and objective, followed by a question or decision the person wants the council to weigh in on.
 
+Pick the 2 to 4 coaches most relevant to this question, ranked from most to least relevant. 
+Only include a coach if it has a genuine stake in this specific question - most questions only concern one to three domains, so do not pad the list just to reach four.
+
+Respond with ONLY valid JSON, no markdown formatting, no commentary:
+a list of agent names in ranked order, e.g. ["greed", "envy"]
+"""
+
+COUNCIL_VERDICT_PROMPT = """
+You are Lucifer, "The Architect," closing out a council session. 
+You will be given the original question and the full relay transcript of the coaches who weighed in.
+
+Report honestly on the outcome: say plainly whether the coaches actually converged on something,
+or whether there's a genuine unresolved tension between them - and if so, name that tension clearly. 
+Do not prescribe what the person should do. The decision is theirs; your job is only to characterize what was actually said.
+
+Keep it short - a few sentences, not a report.
+"""
+
+
+def get_agent_context(agent_name):
+    module = import_agent_module()
+    if module is None:
+        return None
+    domain = getattr(module, "DOMAIN", None)
+    core_question = getattr(module, "CORE_QUESTION", None)
+    objective = getattr(module, "OBJECTIVE", None)
+    if not (domain and core_question and objective):
+        return None
+    return f"Domain: {domain}\nCore question: {core_question}\nObjective: {objective}"
 
 def gather_agent_memories():
     memories = {}
@@ -76,12 +97,7 @@ def build_report_input(memories):
 
 def generate_report(client, memories, model=DEFAULT_MODEL):
     report_input = build_report_input(memories)
-    interaction = client.interactions.create(
-        model=model,
-        input=report_input,
-        system_instruction=LUCIFER_PROMPT,
-    )
-    return interaction.output_text
+    return call_lucifer(client, LUCIFER_PROMPT, report_input, model)
 
 def save_report(report_text):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -90,6 +106,50 @@ def save_report(report_text):
     with open(path, "w", encoding="UTF-8") as f:
         f.write(report_text)
     return path
+
+def call_lucifer(client, system_instruction, input_text, model=DEFAULT_MODEL):
+    return call_model(client, model, system_instruction, input_text)
+
+# for Lucifer's role in the council
+# given Lucifer's response of relevant agents, parses the message to determine the agents
+def parse_agent_list(raw_response, valid_names):
+    sanitized = raw_response.strip()
+    if sanitized.startswith("```"):
+        sanitized = sanitized.removeprefix("```json").removeprefix("```").strip()
+        sanitized = sanitized.removesuffix("```").strip()
+    try:
+        names = json.loads(sanitized)
+        if not isinstance(names, list):
+            print(f"Router response wasn't a list: {names}")
+            return []
+    except json.JSONDecodeError as e:
+        print(f"Error parsing router response: {e}")
+        return []
+
+    valid = [n for n in names if n in valid_names]
+    if len(valid) < len(names):
+        print(f"[Router named unknown agent(s), ignoring: {set(names) - set(valid)}]")
+    return valid
+
+# for Lucifer's role in the council
+# gives Lucifer the question for the council and agents to choose from as well as their "context" (domain, core question, and objective from agent prompt)
+# Lucifer then decides which agents are relevant to weigh in on the Council topic (question)
+def route_council(client, question, agent_names, model=DEFAULT_MODEL):
+    contexts = []
+    for name in agent_names:
+        context = get_agent_context(name)
+        if context:
+            contexts.append(f"--- {name} ---\n{context}")
+
+    router_input = f"{SIN_ROSTER}\n\n" + "\n\n".join(contexts) + f"\n\nQuestion: {question}"
+    raw = call_lucifer(client, ROUTER_PROMPT, router_input, model)
+    return parse_agent_list(raw, agent_names)
+
+# for Lucifer's role in the council
+# final call to Lucifer to determine the conclusion of the Council (or where they got stuck)
+def generate_verdict(client, question, transcript_text, model=DEFAULT_MODEL):
+    verdict_input = f"Question: {question}\n\nCouncil transcript:\n{transcript_text}"
+    return call_lucifer(client, COUNCIL_VERDICT_PROMPT, verdict_input, model)
 
 def main():
     client = setup_client()
