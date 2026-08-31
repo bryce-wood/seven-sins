@@ -8,10 +8,12 @@ Agent-specific files (e.g. gluttony.py) import run_agent() and input their name 
 import os
 import sys
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors
 
 DEFAULT_MODEL = "gemini-3.6-flash"
 EXTRACTION_MODEL = "gemini-3.6-flash" # meant to be the strongest (or stronger) model, ran once per session
@@ -120,13 +122,24 @@ def build_system_prompt(persona_prompt, baseline, events):
 def build_extraction_prompt(persona_prompt):
     return f"{EXTRACTION_PROMPT}\n\nAgent persona and domain:\n{persona_prompt}"
 
-def extract_memory(client, model, extraction_prompt, transcript_text):
-    interaction = client.interactions.create(
-        model=model,
-        input=transcript_text,
-        system_instruction=extraction_prompt,
-    )
-    return interaction.output_text
+def extract_memory(client, model, extraction_prompt, transcript_text, max_retries=2):
+    attempt = 0
+    while True:
+        try:
+            interaction = client.interactions.create(
+                model=model,
+                input=transcript_text,
+                system_instruction=extraction_prompt,
+            )
+            return interaction.output_text
+        except errors.ClientError:
+            raise # if its our fault, stop
+        except Exception as e:
+            attempt += 1
+            if attempt > max_retries:
+                raise
+            print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
+            time.sleep(5)
 
 def parse_proposals(raw_response):
     sanitized = raw_response.strip()
@@ -176,6 +189,15 @@ def review_and_save_memory(agent_name, proposals, baseline, events):
     else:
         print("\nNo changes made to memory.")
 
+def save_failed_transcript(agent_name, transcript):
+    fail_dir = Path("failed_extractions") / agent_name
+    fail_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    path = fail_dir / f"{timestamp}.txt"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(transcript))
+    return path
+
 def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     baseline, events = load_memory(agent_name)
     client = setup_client()
@@ -217,8 +239,13 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     if transcript:
         print("\nReviewing session for memory extraction...")
         extraction_prompt = build_extraction_prompt(persona_prompt)
-        raw = extract_memory(client, EXTRACTION_MODEL, extraction_prompt, "\n".join(transcript))
-        proposals = parse_proposals(raw)
-        review_and_save_memory(agent_name, proposals, baseline, events)
+        try:
+            raw = extract_memory(client, EXTRACTION_MODEL, extraction_prompt, "\n".join(transcript))
+            proposals = parse_proposals(raw)
+            review_and_save_memory(agent_name, proposals, baseline, events)
+        except Exception as e:
+            print(f"\n[Memory extraction failed: {e}]")
+            saved_path = save_failed_transcript(agent_name, transcript)
+            print(f"[Transcript saved to {saved_path}, nothing saved to agent memory]")
     
 
