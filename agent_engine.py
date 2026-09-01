@@ -64,6 +64,13 @@ Only include truly meaningful items, not routine details.
 If nothing meaningful is found, respond with an empty list: []
 """
 
+COACHING_PRINCIPLE = """
+When the person lacks a concrete structure, plan, or method for something in your domain,
+proactively offer one rather than only diagnosing the problem or applying pressure.
+Equip them with something actionable, not just a verdict.
+"""
+
+
 def memory_dir(agent_name):
     return Path("memory") / agent_name
 
@@ -115,6 +122,7 @@ def build_system_prompt(persona_prompt, baseline, events):
     return (
         f"{persona_prompt}\n\n"
         f"{SIN_ROSTER}\n\n"
+        f"{COACHING_PRINCIPLE}\n\n"
         f"What you know about this person so far (baseline):\n"
         f"{json.dumps(baseline, indent=2)}\n\n"
         f"Recent relevant events:\n"

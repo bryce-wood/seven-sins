@@ -25,6 +25,9 @@ WHAT YOU ARE LOOKING FOR:
 - Anything that only becomes visible by reading two coaches' memory side by side
   (e.g. spending and consumption drifting up around the same period; a stated goal in one domain not showing up as real activity anywhere)
 - Signs a coach's own read on the person might be one-note or drifting
+- Whether a goal or want tracked in one coach's memory (a purchase Greed is watching, a relationship goal Lust is watching)
+  is being supported by real movement in a related domain (career progress in Envy's memory, practiced skills in Pride's memory) -
+  or sitting isolated with nothing else in the person's life actually pointed toward it.
 
 WHAT YOU MUST NOT DO:
 - Do not prescribe fixes or tell the person what to do about anything you notice. Name the pattern plainly and stop. The decision about what to do with it is theirs.
