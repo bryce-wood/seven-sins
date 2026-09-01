@@ -18,7 +18,7 @@ from google import genai
 DEFAULT_MODEL = "gemini-3.6-flash"
 EXTRACTION_MODEL = "gemini-3.6-flash" # meant to be the strongest (or stronger) model, ran once per session
 
-BUILT_AGENTS = ["gluttony", "greed"]
+BUILT_AGENTS = ["gluttony", "greed", "wrath", "pride", "lust", "envy"]
 
 SIN_ROSTER = """
 The full council of coaches, for the purpose of accurate redirects:
