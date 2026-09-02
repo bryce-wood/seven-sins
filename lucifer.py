@@ -125,10 +125,10 @@ def parse_agent_list(raw_response, valid_names):
         print(f"Error parsing router response: {e}")
         return []
 
-    valid = [n for n in names if n in valid_names]
+    valid = [n.lower() for n in names if n.lower() in valid_names]
     if len(valid) < len(names):
         print(f"[Router named unknown agent(s), ignoring: {set(names) - set(valid)}]")
-    return valid
+    return valid[:4]
 
 # for Lucifer's role in the council
 # gives Lucifer the question for the council and agents to choose from as well as their "context" (domain, core question, and objective from agent prompt)

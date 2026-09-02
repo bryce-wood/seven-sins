@@ -43,8 +43,8 @@ If the conversation touched on another coach's domain, do not record it here, ev
 it belongs in that other coach's own memory, which this agent cannot write to.
 
 Baseline is for truly stable characteristics: personality traits, values, long-term goals, and patterns you have real reason to believe are durable.
-Do not record current circumstances that could plausibly change soon (e.g. a temporary habit, job status prone to change) 
-as baseline log them as a dated even instead, so it's understood as a snapshot in time rather than a permanent trait.
+Do not record current circumstances that could plausibly change soon (e.g. a temporary habit, job status prone to change) as baseline,
+log them as a dated event instead, so it's understood as a snapshot in time rather than a permanent trait.
 
 If the conversation includes multiple distinct facts or figures (e.g. separate numbers for different budget categories), 
 extract each as its own separate baseline entry rather than summarizing them into one.
@@ -208,11 +208,12 @@ def call_model(client, model, system_instruction, input_text, previous_interacti
                 system_instruction=system_instruction,
                 previous_interaction_id=previous_interaction_id,
             )
-        except Exception:
+        except Exception as e:
             attempt += 1
             if attempt > max_retries:
                 raise
-            print(f"[Temporary error during extraction, retrying in 5s... attempt {attempt}/{max_retries}]")
+            print(f"Error: {e}")
+            print(f"[Temporary error during extraction, retrying in 30s... attempt {attempt}/{max_retries}]")
             # set to 30 seconds to sidestep the RPM minute of gemini's free plan (2 retries at 30s apart will have at least the 2nd one be outside the same minute)
             time.sleep(30)
 
@@ -229,7 +230,7 @@ def run_agent(agent_name, display_name, persona_prompt, model=DEFAULT_MODEL):
     last_id = None
 
     print("="*50)
-    print(f"{agent_name.upper()} - Phase 2 (with memory)")
+    print(f"{agent_name.upper()}")
     print("Type 'quit' or 'exit' to end the session.")
     print("="*50)
 

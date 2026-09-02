@@ -12,7 +12,7 @@ from agent_engine import (
 )
 from lucifer import route_council, generate_verdict
 
-MAX_TURNS = 4
+MAX_ROUNDS = 2
 RUN_EXTRACTION_AFTER_COUNCIL = True # if True, every agent involved will try to extract memories (expensive: every agent makes its own call)
 
 COUNCIL_MEMO = """
@@ -39,8 +39,8 @@ def run_council_turn(client, agent_name, question, transcript):
 def run_council(client, question, participants):
     transcript = []
     turn = 0
-
-    while len(transcript) < MAX_TURNS:
+    max_turns = MAX_ROUNDS * len(participants)
+    while len(transcript) < max_turns:
         agent_name = participants[turn % len(participants)]
         try:
             reply = run_council_turn(client, agent_name, question, transcript)
