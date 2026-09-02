@@ -10,6 +10,7 @@ import sys
 import json
 import time
 import importlib
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -70,6 +71,17 @@ proactively offer one rather than only diagnosing the problem or applying pressu
 Equip them with something actionable, not just a verdict.
 """
 
+# avoids a truncated/corrupted file if the process dies mid-write
+def _atomic_write_json(path, data):
+    path = Path(path)
+    fd, temp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="UTF-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(temp_path, path)
+    except Exception:
+        os.remove(temp_path)
+        raise
 
 def memory_dir(agent_name):
     return Path("memory") / agent_name
@@ -101,11 +113,8 @@ def save_memory(agent_name, baseline, events):
     m_dir = memory_dir(agent_name)
     m_dir.mkdir(parents=True, exist_ok=True)
 
-    with open(m_dir / "baseline.json", "w", encoding="UTF-8") as f:
-        json.dump(baseline, f, indent=2)
-
-    with open(m_dir / "events.json", "w", encoding="UTF-8") as f:
-        json.dump(events, f, indent=2)
+    _atomic_write_json(m_dir / "baseline.json", baseline)
+    _atomic_write_json(m_dir / "events.json", baseline)
 
 def setup_client():
     load_dotenv()
