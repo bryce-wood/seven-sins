@@ -114,7 +114,7 @@ def save_memory(agent_name, baseline, events):
     m_dir.mkdir(parents=True, exist_ok=True)
 
     _atomic_write_json(m_dir / "baseline.json", baseline)
-    _atomic_write_json(m_dir / "events.json", baseline)
+    _atomic_write_json(m_dir / "events.json", events)
 
 def setup_client():
     load_dotenv()
